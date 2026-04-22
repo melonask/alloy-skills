@@ -31,7 +31,7 @@ Add the meta-crate for the fastest setup — it re-exports the most commonly nee
 ```toml
 # Cargo.toml
 [dependencies]
-alloy = { version = "1.0", features = ["full"] }
+alloy = { version = "2.0", features = ["full"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 eyre = "0.6"
 ```
@@ -40,14 +40,14 @@ For finer-grained control, use individual crates:
 
 ```toml
 [dependencies]
-alloy-primitives = "1.0"
-alloy-sol-types = "1.0"
-alloy-provider = { version = "1.0", features = ["reqwest"] }
-alloy-signer-local = "1.0"
-alloy-consensus = "1.0"
-alloy-contract = "1.0"
-alloy-network = { version = "1.0", features = ["ethereum"] }
-alloy-transport = { version = "1.0", features = ["http", "ws"] }
+alloy-primitives = "2.0"
+alloy-sol-types = "2.0"
+alloy-provider = { version = "2.0", features = ["reqwest"] }
+alloy-signer-local = "2.0"
+alloy-consensus = "2.0"
+alloy-contract = "2.0"
+alloy-network = { version = "2.0", features = ["ethereum"] }
+alloy-transport = { version = "2.0", features = ["http", "ws"] }
 ```
 
 ## Quick Reference: Which Guide Do I Need?
@@ -71,6 +71,7 @@ The user's task determines which reference file to read:
 This is the most common starting pattern. Every blockchain interaction flows through a provider.
 
 ```rust
+use alloy::network::EthereumWallet;
 use alloy::primitives::address;
 use alloy::providers::{Provider, ProviderBuilder};
 use alloy::signers::local::PrivateKeySigner;
@@ -80,13 +81,14 @@ async fn main() -> eyre::Result<()> {
     // Set up signer from private key
     let signer: PrivateKeySigner = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
         .parse()?;
+    let wallet = EthereumWallet::from(signer);
 
-    // Build provider with signer (HTTP by default)
+    // Build provider with wallet (HTTP by default). Recommended fillers (gas, nonce, chain ID)
+    // are already enabled by ProviderBuilder::new().
     let rpc_url = "https://eth.llamarpc.com".parse()?;
     let provider = ProviderBuilder::new()
-        .with_recommended_fillers()
-        .signer(signer)
-        .on_http(rpc_url);
+        .wallet(wallet)
+        .connect_http(rpc_url);
 
     // Get balance
     let address = signer.address();
@@ -100,26 +102,28 @@ async fn main() -> eyre::Result<()> {
 ### 2. Transfer Native ETH
 
 ```rust
-use alloy::primitives::{address, U256};
+use alloy::primitives::{address, U256, Bytes};
 use alloy::providers::{Provider, ProviderBuilder};
+use alloy::rpc::types::TransactionRequest;
+use alloy::network::TransactionBuilder;
 use alloy::signers::local::PrivateKeySigner;
+use alloy::network::EthereumWallet;
 
 let signer: PrivateKeySigner = "0x...".parse()?;
+let wallet = EthereumWallet::from(signer);
 let provider = ProviderBuilder::new()
-    .with_recommended_fillers()
-    .signer(signer.clone())
-    .on_http("https://eth.llamarpc.com".parse()?);
+    .wallet(wallet)
+    .connect_http("https://eth.llamarpc.com".parse()?);
 
 // Build and send the transaction
-let tx_hash = provider
-    .send_transaction()
+let tx = TransactionRequest::default()
     .to(address!("0xRecipientAddress"))
     .value(U256::from(1_000_000_000_000_000_000u128)) // 1 ETH (18 decimals)
-    .finish()
-    .await?;
+    .with_input::\u003cBytes\u003e(vec![].into());
+let pending = provider.send_transaction(tx).await?;
 
-// Wait for confirmation
-let receipt = tx_hash.get_receipt().await?;
+// Wait for confirmation and fetch receipt
+let receipt = pending.get_receipt().await?;
 println!("Status: {:?}", receipt.status());
 ```
 
@@ -162,8 +166,12 @@ let token_address = address!("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"); // U
 let token = IERC20::new(token_address, &provider);
 
 // Check balance
-let balance = token.balanceOf(signer.address()).call().await?._0;
+let balance = token.balanceOf(signer.address()).call().await?;
 println!("USDC balance: {}", balance);
+
+// Check decimals
+let decimals = token.decimals().call().await?;
+println!("USDC decimals: {}", decimals);
 
 // Transfer 100 USDC
 let tx_hash = token.transfer(address!("0xRecipient"), U256::from(100_000_000u128))
@@ -196,7 +204,7 @@ println!("Deployed to: {}", contract_address);
 
 // Interact
 let contract = MyContract::new(contract_address, &provider);
-let value = contract.value().call().await?._0;
+let value = contract.value().call().await?;
 ```
 
 ## Key Concepts
@@ -221,7 +229,7 @@ Transport (HTTP / WS / IPC)
 RPC Node
 ```
 
-Use `ProviderBuilder::new().with_recommended_fillers()` to get all standard fillers. The order matters — the signer layer must be on top so it can sign after all other fillers have populated their fields.
+Use `ProviderBuilder::new()` — it comes with all recommended fillers (gas, nonce, chain ID) pre-configured. The wallet layer is added on top so it signs after all fillers have populated their fields.
 
 ### Supported Transaction Types
 

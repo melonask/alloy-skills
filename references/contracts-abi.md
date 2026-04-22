@@ -40,8 +40,7 @@ sol! {
 let token = IERC20::new(token_address, &provider);
 
 // Read-only call (no gas, no on-chain state change)
-let result = token.balanceOf(my_address).call().await?;
-let balance: U256 = result._0;
+let balance = token.balanceOf(my_address).call().await?;
 
 // State-changing call (costs gas, changes state)
 let pending_tx = token.transfer(recipient, amount)
@@ -103,7 +102,7 @@ let receipt = deploy_result.get_receipt().await?;
 
 // Interact with deployed contract
 let contract = SimpleStorage::new(contract_address, &provider);
-let value = contract.value().call().await?._0;
+let value = contract.value().call().await?;
 assert_eq!(value, U256::from(42));
 ```
 
@@ -337,7 +336,7 @@ let calls = vec![
     },
 ];
 
-let results = multicall.aggregate3(calls).call().await?._0;
+let results = multicall.aggregate3(calls).call().await?;
 
 // Decode individual results
 let balance_a = U256::from_be_slice(&results[0].returnData);
@@ -376,9 +375,9 @@ Once you have a contract instance, all defined functions are available as method
 let token = IERC20::new(token_address, &provider);
 
 // View functions (free, no gas)
-let balance = token.balanceOf(addr).call().await?._0;
-let decimals = token.decimals().call().await?._0;
-let total_supply = token.totalSupply().call().await?._0;
+let balance = token.balanceOf(addr).call().await?;
+let decimals = token.decimals().call().await?;
+let total_supply = token.totalSupply().call().await?;
 
 // Write functions (cost gas)
 let tx = token.approve(spender, amount).send().await?;

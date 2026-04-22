@@ -10,7 +10,7 @@ For small scripts and quick prototypes where you want everything in one dependen
 
 ```toml
 [dependencies]
-alloy = { version = "1.0", features = ["full"] }
+alloy = { version = "2.0", features = ["full"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 eyre = "0.6"
 ```
@@ -21,11 +21,11 @@ For applications that send transactions:
 
 ```toml
 [dependencies]
-alloy-primitives = "1.0"
-alloy-provider = { version = "1.0", features = ["reqwest"] }
-alloy-signer-local = "1.0"
-alloy-sol-types = "1.0"
-alloy-network = { version = "1.0", features = ["ethereum"] }
+alloy-primitives = "2.0"
+alloy-provider = { version = "2.0", features = ["reqwest"] }
+alloy-signer-local = "2.0"
+alloy-sol-types = "2.0"
+alloy-network = { version = "2.0", features = ["ethereum"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 eyre = "0.6"
 ```
@@ -36,10 +36,10 @@ For read-only applications (blockchain explorers, indexers, dashboards):
 
 ```toml
 [dependencies]
-alloy-primitives = "1.0"
-alloy-provider = { version = "1.0", features = ["reqwest"] }
-alloy-sol-types = "1.0"
-alloy-network = { version = "1.0", features = ["ethereum"] }
+alloy-primitives = "2.0"
+alloy-provider = { version = "2.0", features = ["reqwest"] }
+alloy-sol-types = "2.0"
+alloy-network = { version = "2.0", features = ["ethereum"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 ```
 
@@ -49,10 +49,10 @@ For real-time applications (bots, monitors, event listeners):
 
 ```toml
 [dependencies]
-alloy-primitives = "1.0"
-alloy-provider = { version = "1.0", features = ["ws"] }
-alloy-sol-types = "1.0"
-alloy-network = { version = "1.0", features = ["ethereum"] }
+alloy-primitives = "2.0"
+alloy-provider = { version = "2.0", features = ["ws"] }
+alloy-sol-types = "2.0"
+alloy-network = { version = "2.0", features = ["ethereum"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 futures-util = "0.3"
 ```
@@ -63,12 +63,12 @@ For applications using Ledger or Trezor:
 
 ```toml
 [dependencies]
-alloy-primitives = "1.0"
-alloy-provider = { version = "1.0", features = ["reqwest"] }
-alloy-signer-ledger = "1.0"
-# or: alloy-signer-trezor = "1.0"
-alloy-sol-types = "1.0"
-alloy-network = { version = "1.0", features = ["ethereum"] }
+alloy-primitives = "2.0"
+alloy-provider = { version = "2.0", features = ["reqwest"] }
+alloy-signer-ledger = "2.0"
+# or: alloy-signer-trezor = "2.0"
+alloy-sol-types = "2.0"
+alloy-network = { version = "2.0", features = ["ethereum"] }
 ```
 
 ### Full Suite (All Features)
@@ -77,7 +77,7 @@ For complex applications that need everything:
 
 ```toml
 [dependencies]
-alloy = { version = "1.0", features = [
+alloy = { version = "2.0", features = [
     "full",
     "signer-local",
     "signer-ledger",
@@ -159,9 +159,9 @@ let client = SignerMiddleware::new(provider, wallet);
 // Alloy
 let signer: PrivateKeySigner = "0x...".parse()?;
 let provider = ProviderBuilder::new()
-    .with_recommended_fillers()  // Replaces manually adding middleware
-    .signer(signer)
-    .on_http("https://rpc.example.com".parse()?);
+      // Replaces manually adding middleware
+    .wallet(wallet)
+    .connect_http("https://rpc.example.com".parse()?);
 ```
 
 Key differences:
@@ -189,7 +189,7 @@ sol! {
 }
 
 let contract = IERC20::new(address, &provider);
-let result = contract.balanceOf(address).call().await?._0;
+let result = contract.balanceOf(address).call().await?;
 let tx = contract.transfer(to, amount).send().await?;
 ```
 

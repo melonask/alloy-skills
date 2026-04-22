@@ -23,15 +23,15 @@ println!("RPC URL: {}", anvil.endpoint_url());
 println!("Chain ID: {}", anvil.chain_id());
 
 // Access default test accounts (10 accounts with 10000 ETH each)
-let accounts = anvil.accounts();
+let accounts = anvil.addresses();
 println!("Account 0: {}", accounts[0]);
 println!("Private key 0: {}", anvil.keys()[0]);
 
 // Use the provider
 let provider = ProviderBuilder::new()
-    .with_recommended_fillers()
-    .signer(PrivateKeySigner::from(anvil.keys()[0]))
-    .on_http(anvil.endpoint_url().parse()?);
+
+    .wallet(anvil.wallet().unwrap())
+    .connect_http(anvil.endpoint_url().parse()?);
 ```
 
 ### Fork Mainnet with Anvil
@@ -92,7 +92,7 @@ let contract_address = deploy_result.address();
 | `.arg("--...")`                    | Pass any anvil CLI argument         |
 | `.spawn()`                         | Launch the node process             |
 | `.endpoint_url()`                  | Get RPC URL (http://127.0.0.1:PORT) |
-| `.accounts()`                      | Get generated test accounts         |
+| `.addresses()`                     | Get generated test accounts         |
 | `.keys()`                          | Get private keys for test accounts  |
 | `.chain_id()`                      | Get chain ID                        |
 | `.set_storage_at(addr, slot, val)` | Override contract storage           |
@@ -120,7 +120,7 @@ let geth = Geth::new()
     .spawn();
 
 let provider = ProviderBuilder::new()
-    .on_ipc(geth.ipc_path());
+    .connect_ipc(geth.ipc_path());
 ```
 
 ### Connect to Running Geth Instance
@@ -130,11 +130,11 @@ If Geth is already running, connect via IPC or HTTP:
 ```rust
 // IPC (fastest, same machine)
 let provider = ProviderBuilder::new()
-    .on_ipc("~/.ethereum/geth.ipc")?;
+    .connect_ipc("~/.ethereum/geth.ipc")?;
 
 // HTTP
 let provider = ProviderBuilder::new()
-    .on_http("http://127.0.0.1:8545".parse()?);
+    .connect_http("http://127.0.0.1:8545".parse()?);
 ```
 
 ## Reth
@@ -149,7 +149,7 @@ let reth = Reth::new()
     .spawn();
 
 let provider = ProviderBuilder::new()
-    .on_ipc(reth.ipc_path());
+    .connect_ipc(reth.ipc_path());
 ```
 
 ## Testing Patterns with Local Nodes
@@ -161,11 +161,11 @@ let provider = ProviderBuilder::new()
 async fn test_transfer() {
     let anvil = Anvil::new().spawn();
     let provider = ProviderBuilder::new()
-        .with_recommended_fillers()
-        .signer(PrivateKeySigner::from(anvil.keys()[0]))
-        .on_http(anvil.endpoint_url().parse().unwrap());
 
-    let recipient = anvil.accounts()[1];
+        .wallet(anvil.wallet().unwrap())
+        .connect_http(anvil.endpoint_url().parse().unwrap());
+
+    let recipient = anvil.addresses()[1];
 
     // Deploy token, transfer, verify — all on local anvil
     let token = deploy_token(&provider).await.unwrap();
@@ -186,9 +186,9 @@ async fn test_uniswap_swap() {
         .spawn();
 
     let provider = ProviderBuilder::new()
-        .with_recommended_fillers()
-        .signer(PrivateKeySigner::from(anvil.keys()[0]))
-        .on_http(anvil.endpoint_url().parse().unwrap());
+
+        .wallet(anvil.wallet().unwrap())
+        .connect_http(anvil.endpoint_url().parse().unwrap());
 
     // Interact with real Uniswap contracts on forked state
     // The test account has 10000 ETH from Anvil defaults

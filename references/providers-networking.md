@@ -15,11 +15,11 @@ use alloy::providers::{Provider, ProviderBuilder};
 
 // From URL string
 let provider = ProviderBuilder::new()
-    .on_http("https://eth.llamarpc.com".parse()?);
+    .connect_http("https://eth.llamarpc.com".parse()?);
 
 // From Url
 let rpc_url = url::Url::parse("https://mainnet.infura.io/v3/YOUR_KEY")?;
-let provider = ProviderBuilder::new().on_http(rpc_url);
+let provider = ProviderBuilder::new().connect_http(rpc_url);
 ```
 
 ## Provider with Signer and Fillers
@@ -33,9 +33,9 @@ use alloy::signers::local::PrivateKeySigner;
 let signer: PrivateKeySigner = "0x...".parse()?;
 
 let provider = ProviderBuilder::new()
-    .with_recommended_fillers()  // Gas, Nonce, ChainId fillers
-    .signer(signer)              // Add signing capability
-    .on_http("https://eth.llamarpc.com".parse()?);
+      // Gas, Nonce, ChainId fillers
+    .wallet(wallet)              // Add signing capability
+    .connect_http("https://eth.llamarpc.com".parse()?);
 ```
 
 `with_recommended_fillers()` adds three layers in the correct order:
@@ -55,8 +55,8 @@ use alloy::transports::http::Http;
 // WS provider with reconnect
 let ws_url = "wss://eth-mainnet.g.alchemy.com/v2/YOUR_KEY";
 let provider = ProviderBuilder::new()
-    .with_recommended_fillers()
-    .signer(signer)
+
+    .wallet(wallet)
     .on_ws(ws_url.parse()?);
 ```
 
@@ -77,7 +77,7 @@ For lowest latency when running a local node (Geth, Reth) on the same machine:
 
 ```rust
 let provider = ProviderBuilder::new()
-    .on_ipc("/path/to/geth.ipc")?;
+    .connect_ipc("/path/to/geth.ipc")?;
 ```
 
 ## Provider Builder Pattern
@@ -89,9 +89,9 @@ let provider = ProviderBuilder::new()
     // Layer order: bottom to top (transport is innermost)
     .layer(logging_layer)      // Optional: log all requests
     .layer(retry_layer)        // Optional: retry failed requests
-    .with_recommended_fillers()
-    .signer(signer)
-    .on_http(rpc_url);
+
+    .wallet(wallet)
+    .connect_http(rpc_url);
 ```
 
 ## Layers (Middleware)
@@ -107,9 +107,9 @@ use alloy::provider::layers::RetryLayer;
 
 let provider = ProviderBuilder::new()
     .layer(RetryLayer::new(3))  // Max 3 retries
-    .with_recommended_fillers()
-    .signer(signer)
-    .on_http(rpc_url);
+
+    .wallet(wallet)
+    .connect_http(rpc_url);
 ```
 
 ### Fallback Layer
@@ -126,9 +126,9 @@ let http3 = Http::<Client>::new("https://rpc3.example.com".parse()?);
 
 let provider = ProviderBuilder::new()
     .layer(FallbackLayer::new(vec![http1, http2, http3]))
-    .with_recommended_fillers()
-    .signer(signer)
-    .on_http("https://rpc-primary.example.com".parse()?);
+
+    .wallet(wallet)
+    .connect_http("https://rpc-primary.example.com".parse()?);
 ```
 
 ### Logging Layer
@@ -140,9 +140,9 @@ use alloy::provider::layers::LoggingLayer;
 
 let provider = ProviderBuilder::new()
     .layer(LoggingLayer::default())
-    .with_recommended_fillers()
-    .signer(signer)
-    .on_http(rpc_url);
+
+    .wallet(wallet)
+    .connect_http(rpc_url);
 ```
 
 ### Custom Delay Layer
@@ -156,9 +156,9 @@ use tower::ServiceBuilder;
 let provider = ProviderBuilder::new()
     .layer(tower::ServiceBuilder::new()
         .delay(Duration::from_millis(100)))
-    .with_recommended_fillers()
-    .signer(signer)
-    .on_http(rpc_url);
+
+    .wallet(wallet)
+    .connect_http(rpc_url);
 ```
 
 ## Batched RPC Calls
@@ -169,7 +169,7 @@ Execute multiple RPC calls in a single HTTP request for efficiency:
 use alloy::providers::ProviderBuilder;
 
 let provider = ProviderBuilder::new()
-    .on_http("https://eth.llamarpc.com".parse()?);
+    .connect_http("https://eth.llamarpc.com".parse()?);
 
 // Multiple independent queries in one batch
 let (block_number, gas_price, balance) = tokio::join!(
@@ -192,7 +192,7 @@ let mut url = "https://mainnet.infura.io/v3/YOUR_KEY".parse::<url::Url>()?;
 
 // Add custom headers
 let provider = ProviderBuilder::new()
-    .on_http(url);
+    .connect_http(url);
 ```
 
 ## Multi-Chain Provider
@@ -201,19 +201,19 @@ When working with multiple chains, create separate providers:
 
 ```rust
 let eth_provider = ProviderBuilder::new()
-    .with_recommended_fillers()
-    .signer(eth_signer)
-    .on_http("https://eth.llamarpc.com".parse()?);
+
+    .wallet(eth_signer)
+    .connect_http("https://eth.llamarpc.com".parse()?);
 
 let arb_provider = ProviderBuilder::new()
-    .with_recommended_fillers()
-    .signer(arb_signer)
-    .on_http("https://arb1.arbitrum.io/rpc".parse()?);
+
+    .wallet(arb_signer)
+    .connect_http("https://arb1.arbitrum.io/rpc".parse()?);
 
 let base_provider = ProviderBuilder::new()
-    .with_recommended_fillers()
-    .signer(base_signer)
-    .on_http("https://mainnet.base.org".parse()?);
+
+    .wallet(base_signer)
+    .connect_http("https://mainnet.base.org".parse()?);
 ```
 
 ## Dynamic Provider (Runtime Chain Selection)
@@ -225,8 +225,8 @@ use alloy::providers::DynProvider;
 
 fn create_provider(rpc_url: &str) -> DynProvider {
     let provider = ProviderBuilder::new()
-        .with_recommended_fillers()
-        .on_http(rpc_url.parse().unwrap());
+
+        .connect_http(rpc_url.parse().unwrap());
 
     DynProvider::new(provider)
 }

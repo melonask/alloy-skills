@@ -345,7 +345,7 @@ async fn reconcile_payments(
     let mut statuses = Vec::new();
 
     for (from, expected_amount) in expected_payments {
-        let actual_balance = token.balanceOf(my_address).call().await?._0;
+        let actual_balance = token.balanceOf(my_address).call().await?;
 
         // Check logs for specific transfer from this sender
         let filter = Filter::new()

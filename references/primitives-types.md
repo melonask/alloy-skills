@@ -199,7 +199,7 @@ let parsed: U256 = s.parse()?;
 let addr: Address = address!("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
 
 // Address -> B256 (zero-padded)
-let hash: B256 = addr.into();
+let hash: B256 = addr.into_word();
 
 // B256 -> Address (takes last 20 bytes)
 let addr2: Address = Address::from_word(hash.into());
