@@ -175,6 +175,37 @@ tokio::select! {
 }
 ```
 
+### High-Performance Block Sweeping (The 1-Millisecond Rule)
+
+Never poll the database per transaction or poll individual user addresses. Instead, sweep logs for token contracts and intersect them with an in-memory `HashSet` of user addresses.
+
+```rust
+use std::collections::HashSet;
+use alloy::primitives::Address;
+
+// 1. Load all million users from DB into RAM once at startup
+let my_users: HashSet<Address> = fetch_all_users_from_db().await?;
+
+// 2. Fetch logs for a range of blocks for the USDC contract
+let filter = Filter::new()
+    .address(usdc_contract)
+    .from_block(1000)
+    .to_block(1005)
+    .event_signature(transfer_topic);
+
+let logs = provider.get_logs(&filter).await?;
+
+// 3. Filter in RAM (takes < 1ms for thousands of logs)
+for log in logs {
+    let transfer = Transfer::decode_log(&log)?;
+    // transfer.to is the recipient (topic2)
+    if my_users.contains(&transfer.to) {
+        // Send MQ message to credit user's balance
+        println!("User received payment: {}", transfer.value);
+    }
+}
+```
+
 ## Poll-Based Log Watching (HTTP)
 
 When you cannot use WebSocket, poll for new logs at intervals:

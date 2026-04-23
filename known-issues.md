@@ -175,6 +175,63 @@ Actually, in our tests, `.ok_or(eyre::eyre!("..."))` worked.
 
 ---
 
+## Issue 11: Nonce Race Condition with Concurrent Settlement Workers
+
+**File:** `references/providers-networking.md`, `references/transactions-payments.md`
+
+**Problem:** When using `ProviderBuilder::new().wallet(wallet)`, the `NonceFiller` is included by default. The `NonceFiller` queries `eth_getTransactionCount` from the RPC node to determine the nonce. If you run settlement workers with `.concurrency(N)` where N > 1 (e.g., apalis with 4 concurrent workers), multiple threads may query the nonce simultaneously before the first transaction hits the mempool. They will all receive the same nonce (e.g., 42), causing 3 of 4 transactions to fail with "nonce too low" or "replacement transaction underpriced".
+
+**Scenario:** Facilitator settling x402 payment transactions on-chain with 4 concurrent workers.
+
+**Fix Option 1 — Restrict concurrency to 1:**
+```rust
+// For settlement/ledger workers, use concurrency(1)
+.configure_worker(|worker| {
+    worker.concurrency(1)
+})
+```
+
+**Fix Option 2 — Implement a local Mutex nonce manager:**
+```rust
+use std::sync::Mutex;
+use alloy::providers::{Provider, ProviderBuilder};
+use alloy::signers::local::PrivateKeySigner;
+use alloy::network::EthereumWallet;
+
+struct NonceManager {
+    next_nonce: Mutex<u64>,
+}
+
+impl NonceManager {
+    fn new(start: u64) -> Self {
+        Self { next_nonce: Mutex::new(start) }
+    }
+
+    fn next(&self) -> u64 {
+        *self.next_nonce.lock().unwrap()
+    }
+
+    fn increment(&self) -> u64 {
+        *self.next_nonce.lock().unwrap()
+    }
+}
+
+// When building the provider, disable the default NonceFiller and use your own:
+// ProviderBuilder::new()
+//     .wallet(wallet)
+    // .disable_recommended_fillers()  // Remove default NonceFiller
+//     .connect_http(rpc_url);
+
+// Then manually set nonce on each transaction:
+// let tx = tx_request.clone().with_nonce(manager.next());
+// manager.increment();
+```
+
+**Fix Option 3 — Redis-backed atomic nonce (for distributed systems):**
+For multi-instance deployments, use Redis `INCR` to atomically increment the nonce across processes.
+
+---
+
 ## Summary of Verified Working Features
 
 The following patterns from the skill were verified to work correctly with alloy 2.0.1:

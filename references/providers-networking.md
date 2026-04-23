@@ -44,6 +44,17 @@ Recommended fillers are already included when using `ProviderBuilder::new()`. If
 2. **NonceFiller** — manages nonce tracking to prevent replay and conflicts
 3. **GasFiller** — estimates gas price and gas limit for each transaction
 
+### ⚠️ NonceFiller Concurrency Warning
+
+If your settlement workers run with concurrency > 1 (e.g., apalis with `.concurrency(4)`), the default `NonceFiller` can cause race conditions. Multiple threads may query `eth_getTransactionCount` simultaneously before transactions hit the mempool, receiving the same nonce and causing "nonce too low" errors.
+
+**Solutions:**
+1. **Restrict to concurrency(1)** for settlement workers
+2. **Implement a local `Mutex<u64>` nonce manager** that atomic-increments in memory before signing
+3. **Redis-backed nonce** for distributed multi-instance deployments
+
+See `known-issues.md` for detailed fix patterns.
+
 ## WebSocket Provider
 
 WebSocket connections are essential for subscriptions (blocks, logs, pending transactions). HTTP providers can only poll.
