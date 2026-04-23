@@ -255,13 +255,13 @@ let log: alloy::rpc::types::Log = /* ... */;
 let transfer_sig = alloy::primitives::keccak256(b"Transfer(address,address,uint256)");
 let approval_sig = alloy::primitives::keccak256(b"Approval(address,address,uint256)");
 
-match log.topics.first() {
+    match log.topics.first() {
     Some(topic) if *topic == transfer_sig => {
-        let transfer = Transfer::decode_log(&log, true)?;
+        let transfer = Transfer::decode_log(&log)?;
         println!("Transfer: {} -> {} = {}", transfer.from, transfer.to, transfer.value);
     }
     Some(topic) if *topic == approval_sig => {
-        let approval = Approval::decode_log(&log, true)?;
+        let approval = Approval::decode_log(&log)?;
         println!("Approval: {} -> {} = {}", approval.owner, approval.spender, approval.value);
     }
     _ => {

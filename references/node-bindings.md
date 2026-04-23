@@ -8,13 +8,16 @@ Anvil is Foundry's local Ethereum node, perfect for development and testing.
 
 ```toml
 [dependencies]
-alloy-node-bindings = "1.0"
+alloy = { version = "2.0", features = ["node-bindings"] }
 ```
 
 ### Launch Anvil Programmatically
 
 ```rust
-use alloy_node_bindings::Anvil;
+use alloy::node_bindings::Anvil;
+use alloy::providers::{Provider, ProviderBuilder};
+use alloy::signers::local::PrivateKeySigner;
+use alloy::network::EthereumWallet;
 
 // Launch with defaults (random accounts, port 8545)
 let anvil = Anvil::new().spawn();
@@ -27,11 +30,14 @@ let accounts = anvil.addresses();
 println!("Account 0: {}", accounts[0]);
 println!("Private key 0: {}", anvil.keys()[0]);
 
+// Create a wallet from the first Anvil key
+let signer: PrivateKeySigner = anvil.keys()[0].parse().unwrap();
+let wallet = EthereumWallet::from(signer);
+
 // Use the provider
 let provider = ProviderBuilder::new()
-
-    .wallet(anvil.wallet().unwrap())
-    .connect_http(anvil.endpoint_url().parse()?);
+    .wallet(wallet)
+    .connect_http(anvil.endpoint_url());
 ```
 
 ### Fork Mainnet with Anvil
@@ -113,7 +119,8 @@ The Anvil instance automatically kills the process when dropped:
 ### Launch Geth Programmatically
 
 ```rust
-use alloy_node_bindings::Geth;
+use alloy::node_bindings::Geth;
+use alloy::providers::{Provider, ProviderBuilder};
 
 let geth = Geth::new()
     .arg("--dev")          // Dev mode (single validator, instant mining)
@@ -142,7 +149,8 @@ let provider = ProviderBuilder::new()
 ### Launch Reth Programmatically
 
 ```rust
-use alloy_node_bindings::Reth;
+use alloy::node_bindings::Reth;
+use alloy::providers::{Provider, ProviderBuilder};
 
 let reth = Reth::new()
     .arg("--dev")          // Dev mode
@@ -157,13 +165,19 @@ let provider = ProviderBuilder::new()
 ### Pattern: Fresh Anvil Per Test
 
 ```rust
+use alloy::node_bindings::Anvil;
+use alloy::signers::local::PrivateKeySigner;
+use alloy::network::EthereumWallet;
+use alloy::providers::ProviderBuilder;
+
 #[tokio::test]
 async fn test_transfer() {
     let anvil = Anvil::new().spawn();
+    let signer: PrivateKeySigner = anvil.keys()[0].parse().unwrap();
+    let wallet = EthereumWallet::from(signer);
     let provider = ProviderBuilder::new()
-
-        .wallet(anvil.wallet().unwrap())
-        .connect_http(anvil.endpoint_url().parse().unwrap());
+        .wallet(wallet)
+        .connect_http(anvil.endpoint_url());
 
     let recipient = anvil.addresses()[1];
 
@@ -177,6 +191,11 @@ async fn test_transfer() {
 ### Pattern: Fork Testing
 
 ```rust
+use alloy::node_bindings::Anvil;
+use alloy::signers::local::PrivateKeySigner;
+use alloy::network::EthereumWallet;
+use alloy::providers::ProviderBuilder;
+
 #[tokio::test]
 async fn test_uniswap_swap() {
     // Fork mainnet so Uniswap contracts exist
@@ -185,10 +204,11 @@ async fn test_uniswap_swap() {
         .fork_block_number(19_000_000)
         .spawn();
 
+    let signer: PrivateKeySigner = anvil.keys()[0].parse().unwrap();
+    let wallet = EthereumWallet::from(signer);
     let provider = ProviderBuilder::new()
-
-        .wallet(anvil.wallet().unwrap())
-        .connect_http(anvil.endpoint_url().parse().unwrap());
+        .wallet(wallet)
+        .connect_http(anvil.endpoint_url());
 
     // Interact with real Uniswap contracts on forked state
     // The test account has 10000 ETH from Anvil defaults

@@ -8,6 +8,7 @@ The most basic verification: check that a transaction succeeded and extract rele
 
 ```rust
 use alloy::providers::Provider;
+use eyre::Context; // Provides `ok_or_eyre`
 
 let tx_hash: B256 = "0x...".parse()?;
 
@@ -121,7 +122,7 @@ let logs = provider.get_logs(&filter).await?;
 
 for log in logs {
     // Decode the event
-    let transfer = Transfer::decode_log(&log, true)?;
+    let transfer = Transfer::decode_log(&log)?;
     println!(
         "Received {} tokens from {} (tx: {})",
         transfer.value, transfer.from, log.transaction_hash.unwrap()
@@ -142,7 +143,7 @@ let filter = Filter::new()
 let mut log_stream = provider.subscribe_logs(&filter).await?;
 
 while let Some(log) = log_stream.next().await {
-    let transfer = Transfer::decode_log(&log, true)?;
+    let transfer = Transfer::decode_log(&log)?;
     println!(
         "NEW PAYMENT: {} tokens from {} in tx {}",
         transfer.value,
@@ -269,7 +270,7 @@ impl PaymentListener {
         let mut stream = self.provider.subscribe_logs(&filter).await?;
 
         while let Some(log) = stream.next().await {
-            let transfer = Transfer::decode_log(&log, true)?;
+            let transfer = Transfer::decode_log(&log)?;
             let decimals = self.monitored_tokens.get(&log.address).copied().unwrap_or(18);
             let formatted = alloy::primitives::utils::format_units(transfer.value, decimals)?;
 
@@ -356,7 +357,7 @@ async fn reconcile_payments(
         let logs = provider.get_logs(&filter).await?;
         let total_received: U256 = logs.iter()
             .filter_map(|log| {
-                let transfer = Transfer::decode_log(log, true).ok()?;
+                let transfer = Transfer::decode_log(log).ok()?;
                 Some(transfer.value)
             })
             .sum();

@@ -81,8 +81,7 @@ async fn main() -> eyre::Result<()> {
     // Set up signer from private key
     let signer: PrivateKeySigner = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
         .parse()?;
-    let wallet = EthereumWallet::from(signer);
-
+    let wallet = EthereumWallet::from(signer.clone());
     // Build provider with wallet (HTTP by default). Recommended fillers (gas, nonce, chain ID)
     // are already enabled by ProviderBuilder::new().
     let rpc_url = "https://eth.llamarpc.com".parse()?;
@@ -110,7 +109,7 @@ use alloy::signers::local::PrivateKeySigner;
 use alloy::network::EthereumWallet;
 
 let signer: PrivateKeySigner = "0x...".parse()?;
-let wallet = EthereumWallet::from(signer);
+let wallet = EthereumWallet::from(signer.clone());
 let provider = ProviderBuilder::new()
     .wallet(wallet)
     .connect_http("https://eth.llamarpc.com".parse()?);
@@ -119,7 +118,7 @@ let provider = ProviderBuilder::new()
 let tx = TransactionRequest::default()
     .to(address!("0xRecipientAddress"))
     .value(U256::from(1_000_000_000_000_000_000u128)) // 1 ETH (18 decimals)
-    .with_input::\u003cBytes\u003e(vec![].into());
+    .with_input(Bytes::new());
 let pending = provider.send_transaction(tx).await?;
 
 // Wait for confirmation and fetch receipt
@@ -279,7 +278,7 @@ Key attributes:
 
 ## Common Pitfalls
 
-1. **Missing fillers** — Always use `.with_recommended_fillers()` unless you have a reason not to. Without the gas filler, you must manually set gas price and gas limit. Without the nonce filler, you must track nonces yourself.
+1. **Missing fillers** — `ProviderBuilder::new()` already includes recommended fillers by default in Alloy 2.0. Use `.disable_recommended_fillers()` if you need to opt out and manage gas, nonce, and chain ID manually.
 
 2. **Decimals confusion** — ERC-20 tokens use different decimals (USDC = 6, WETH = 18). Always check with `decimals()` call or use `parse_units` / `format_units` utilities.
 

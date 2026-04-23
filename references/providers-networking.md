@@ -38,7 +38,7 @@ let provider = ProviderBuilder::new()
     .connect_http("https://eth.llamarpc.com".parse()?);
 ```
 
-`with_recommended_fillers()` adds three layers in the correct order:
+Recommended fillers are already included when using `ProviderBuilder::new()`. If you need to opt out, use `.disable_recommended_fillers()`.
 
 1. **ChainIdFiller** — queries the node for chain ID and sets it on every transaction
 2. **NonceFiller** — manages nonce tracking to prevent replay and conflicts

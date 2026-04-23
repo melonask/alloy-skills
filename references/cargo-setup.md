@@ -167,7 +167,7 @@ let provider = ProviderBuilder::new()
 Key differences:
 
 - Alloy uses `ProviderBuilder` with a fluent API instead of middleware wrapping
-- Fillers (gas, nonce, chain ID) are added via `with_recommended_fillers()` instead of separate middleware
+- Fillers (gas, nonce, chain ID) are included by default in `ProviderBuilder::new()`. Use `.disable_recommended_fillers()` to opt out.
 - No need for `SignerMiddleware` — the signer is added directly to the builder
 
 ### Contract Migration
